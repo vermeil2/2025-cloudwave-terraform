@@ -1,0 +1,100 @@
+grafana:
+  adminPassword: "highfive"
+  nodeSelector:
+    eks.amazonaws.com/nodegroup: general
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    annotations:
+      alb.ingress.kubernetes.io/certificate-arn: ${grafana_dns}
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: "443"
+      alb.ingress.kubernetes.io/scheme: "internet-facing"
+      alb.ingress.kubernetes.io/target-type: "ip"
+      alb.ingress.kubernetes.io/healthcheck-path: "/"
+      alb.ingress.kubernetes.io/load-balancer-attributes: "deletion_protection.enabled=false"
+      #alb.ingress.kubernetes.io/group.name: "public-dashboard"
+
+
+    ingressClassName: alb
+    rules:
+      - host: ${grafana_dns}
+        http:
+          paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: grafana-server
+                  port:
+                    number: 8080
+
+  persistence:
+    enabled: true
+    storageClassName: "gp2"
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+  plugins:
+    - grafana-piechart-panel
+  defaultDashboardsEnabled: true
+
+  serviceAccount:
+    create: false
+    name: grafana-sa
+
+  env:
+    GF_SERVER_ROOT_URL: https://${grafana_dns}
+
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: CloudWatch
+          type: cloudwatch
+          access: proxy
+          jsonData:
+            authType: default
+            defaultRegion: ap-northeast-2
+
+prometheus:
+  nodeSelector:
+    eks.amazonaws.com/nodegroup: general
+  service:
+    enabled: true
+    type: ClusterIP
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: true
+    podMonitorSelectorNilUsesHelmValues: true
+    retention: 10d
+    enableAdminAPI: false
+    resources:
+      requests:
+        memory: "400Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp2
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+alertmanager:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+admissionWebhooks:
+  enabled: true
+  patch:
+    enabled: true
