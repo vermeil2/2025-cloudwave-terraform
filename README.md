@@ -1,13 +1,42 @@
-# AWS EKS 기반 올리브영 인프라 프로젝트
+### 프로젝트 개요
 
-Terraform을 사용하여 AWS EKS(Elastic Kubernetes Service) 클러스터와 관련 인프라를 코드로 관리하는 Infrastructure as Code(IaC) 디렉토리 입니다.
+**‘올리브영 O2O 서비스, 고객 경험을 혁신하는 인프라 설계’ 프로젝트**는 온·오프라인 사용자 경험의 격차를 줄이고, 더욱 **실시간성**, **확장성**, **고가용성**을 갖춘 인프라를 구축하는 것을 목표로 했습니다. 
 
+### 프로젝트 추진 배경
 
-## 🏗️ 아키텍처
+O2O(Online to Offline) 서비스는 온라인 플랫폼을 통해 오프라인 서비스를 예약하거나 주문할 수 있는 구조로, 최근 유통 업계에서 필수적인 서비스로 자리 잡았습니다. 특히 올리브영은 국내 대표적인 H&B(Health & Beauty) 브랜드로, 오프라인 매장을 기반으로 앱을 통한 주문 및 픽업 서비스를 제공하고 있습니다.
+
+하지만 실제 현장을 방문한 결과, 다음과 같은 문제점들이 발견되었습니다
+
+- **재고 차감 시점의 불일치**로 인해 앱 주문 고객과 현장 고객 간 재고 충돌이 발생함
+- 실시간 재고 반영이 되지 않아 **주문 후 품절 통보**를 받는 경우가 빈번함
+- 매장 직원은 주문 처리로 인해 업무가 과중되고, 고객 응대의 질이 저하됨
+- 고객 입장에서도 매장 재고 확인과 상품 확보에 대한 **불신**이 존재함
+
+**위의 문제를 해결하고, 고가용성 서비스를 제공하기 위해 AWS 클라우드 플랫폼과 컨테이너 기반 아키텍처(EKS)**를 선택하고, 인프라 자동화, 보안, 모니터링 등을 종합적으로 고려하였습니다.
+
+## 웹 시연
+
+![웹시연](웹_시연.gif)
+
+## 아키텍처
 
 ![아키텍처](https://github.com/vermeil2/2025-cloudwave-terraform/blob/main/%EC%9D%B8%ED%94%84%EB%9D%BC%20%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98.png)
 
-## 🚀 주요 기능
+## **아키텍처 설계**
+
+### 전체 아키텍처 개요
+
+본 프로젝트는 **실시간성, 확장성, 고가용성**을 달성하기 위해 **EKS 기반의 마이크로서비스 아키텍처**를 도입했습니다. 운영 환경은 **Seoul 리전을 기준으로 구성**되며, **Tokyo 리전은 재해 복구(DR, Disaster Recovery)** 용도로 구성되어 있습니다.
+
+- **클라이언트 접근 경로**: Route53, WAF, CloudFront, ACM을 통해 안전하게 라우팅
+- **서비스 운영 환경**: 서울 리전의 Amazon EKS에서 컨테이너 기반으로 서비스 운영
+- **재해복구 환경**: 도쿄 리전에 이중화된 EKS, DB 환경 구성
+- **실시간 처리 기반**: Redis + Kafka 조합으로 빠르고 확장 가능한 데이터 처리
+- **모니터링 및 로깅**: Grafana, Prometheus, CloudWatch, Athena 등 도입
+- **배포 자동화**: GitLab → Jenkins → ECR → ArgoCD 기반의 GitOps 파이프라인 운영
+
+## 주요 기능
 
 ### 네트워크 인프라
 - **VPC**: 멀티 AZ 고가용성 네트워크 구성
@@ -63,7 +92,7 @@ terraform-env/
     └── ecr-irsa/              # ECR 접근을 위한 IRSA
 ```
 
-## 🛠️ 기술 스택
+## 기술 스택
 
 - **Infrastructure as Code**: Terraform
 - **Cloud Provider**: AWS
@@ -73,33 +102,7 @@ terraform-env/
 - **CI/CD**: ArgoCD (GitOps)
 - **Backend**: Terraform S3 Backend
 
-## 📦 모듈 상세
-
-### network
-VPC, 서브넷, 라우팅 테이블, NAT Gateway, Internet Gateway를 구성합니다.
-
-### eks
-EKS 클러스터, Node Groups, IAM 역할 및 정책을 생성합니다.
-
-### metric-server
-Kubernetes Metrics Server를 배포하여 리소스 메트릭을 수집합니다.
-
-### cluster-autoscaler
-워크로드에 따라 노드를 자동으로 스케일링합니다.
-
-### lb-controller
-Kubernetes Ingress 리소스를 기반으로 AWS ALB/NLB를 자동 생성합니다.
-
-### monitoring
-Prometheus와 Grafana를 배포하여 클러스터 및 애플리케이션 모니터링을 제공합니다.
-
-### argocd
-GitOps 기반으로 애플리케이션 배포를 자동화합니다.
-
-### ecr-irsa
-ECR 이미지 접근을 위한 IAM Roles for Service Accounts를 구성합니다.
-
-## 🚦 시작하기
+## 사전 준비
 
 ### 사전 요구사항
 
@@ -142,7 +145,7 @@ ECR 이미지 접근을 위한 IAM Roles for Service Accounts를 구성합니다
 
 ## ⚙️ 주요 변수
 
-| 변수명 | 설명 | 예시 |
+| 변수명 | 설명 | 내용 |
 |--------|------|------|
 | `env` | 환경 이름 | `prod`, `staging` |
 | `region` | AWS 리전 | `ap-northeast-2` |
@@ -162,4 +165,4 @@ ECR 이미지 접근을 위한 IAM Roles for Service Accounts를 구성합니다
 
 ## 📝 주의사항
 
-- **Terraform Destroy 시**: 로드밸런서가 생성된 경우, 네트워크 인터페이스(ENI)가 자동으로 삭제되지 않을 수 있습니다. 수동으로 EC2 콘솔에서 로드밸런서를 먼저 삭제한 후 destroy를 실행하세요. S3 삭제시 버킷 내용을 비우지 않으면 삭제되지 않으니, 이점 주의하세요.
+- **Terraform Destroy 시**: 로드밸런서가 생성된 경우, 네트워크 인터페이스(ENI)가 자동으로 삭제되지 않을 수 있습니다. 수동으로 EC2 콘솔에서 로드밸런서를 먼저 삭제한 후 destroy를 실행하세요. 또한, S3 삭제시 버킷 내용을 비우지 않으면 삭제되지 않으니 주의하세요.
